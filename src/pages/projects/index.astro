@@ -1,0 +1,45 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const projects = (await getCollection('projects')).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+---
+
+<BaseLayout title="项目" description="项目积累">
+  <h1 class="mb-8 text-3xl font-bold">项目</h1>
+  <div class="space-y-6">
+    {projects.map((project) => (
+      <article class="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
+        <h2 class="text-lg font-semibold">
+          <a href={`/projects/${project.id.replace(/\.(json|ya?ml)$/, '')}/`} class="hover:underline">
+            {project.data.name}
+          </a>
+        </h2>
+        <p class="mt-2 text-neutral-600 dark:text-neutral-400">{project.data.summary}</p>
+        {project.data.techStack.length > 0 && (
+          <div class="mt-3 flex flex-wrap gap-2">
+            {project.data.techStack.map((t) => (
+              <span class="rounded bg-neutral-100 px-2 py-0.5 text-xs dark:bg-neutral-800">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+        <div class="mt-3 flex gap-4 text-sm">
+          {project.data.repoUrl && (
+            <a href={project.data.repoUrl} class="text-neutral-600 hover:underline dark:text-neutral-400">
+              源码
+            </a>
+          )}
+          {project.data.demoUrl && (
+            <a href={project.data.demoUrl} class="text-neutral-600 hover:underline dark:text-neutral-400">
+              Demo
+            </a>
+          )}
+        </div>
+      </article>
+    ))}
+  </div>
+</BaseLayout>

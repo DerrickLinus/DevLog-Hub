@@ -1,0 +1,9 @@
+{
+  "name": "示例项目",
+  "summary": "这是一个示例项目，用来验证项目展示页的效果。替换成你自己的项目即可。",
+  "techStack": ["TypeScript", "Astro"],
+  "repoUrl": "https://github.com/example/example",
+  "demoUrl": "https://example.com",
+  "relatedPosts": ["example-post"],
+  "order": 0
+}

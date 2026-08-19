@@ -1,0 +1,30 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import PostCard from '../components/PostCard.astro';
+
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const latest = [
+  ...posts.filter((p) => p.data.pinned),
+  ...posts.filter((p) => !p.data.pinned),
+].slice(0, 6);
+---
+
+<BaseLayout>
+  <Hero />
+  <section>
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-xl font-semibold">最新文章</h2>
+      <a href="/blog/" class="text-sm text-neutral-500 hover:underline">查看全部 →</a>
+    </div>
+    {latest.length > 0 ? (
+      latest.map((post) => <PostCard post={post} />)
+    ) : (
+      <p class="text-neutral-500">还没有文章，先写一篇吧。</p>
+    )}
+  </section>
+</BaseLayout>

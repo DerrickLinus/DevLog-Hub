@@ -1,0 +1,27 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const posts = await getCollection('posts', ({ data }) => !data.draft);
+const tagCounts = new Map<string, number>();
+for (const post of posts) {
+  for (const tag of post.data.tags) {
+    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  }
+}
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<BaseLayout title="标签" description="按标签浏览文章">
+  <h1 class="mb-8 text-3xl font-bold">标签</h1>
+  <div class="flex flex-wrap gap-3">
+    {tags.map(([tag, count]) => (
+      <a
+        href={`/blog/tag/${encodeURIComponent(tag)}/`}
+        class="rounded-full bg-neutral-100 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+      >
+        {tag} <span class="text-neutral-400">{count}</span>
+      </a>
+    ))}
+  </div>
+</BaseLayout>

@@ -1,0 +1,50 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((project) => ({
+    params: { slug: project.id.replace(/\.(json|ya?ml)$/, '') },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { data } = project;
+
+const relatedPosts = (
+  await getCollection('posts', ({ data: d }) => !d.draft)
+).filter((p) => data.relatedPosts.includes(p.slug));
+---
+
+<BaseLayout title={data.name} description={data.summary}>
+  <article>
+    <h1 class="text-3xl font-bold">{data.name}</h1>
+    <p class="mt-3 text-neutral-600 dark:text-neutral-400">{data.summary}</p>
+    {data.techStack.length > 0 && (
+      <div class="mt-4 flex flex-wrap gap-2">
+        {data.techStack.map((t) => (
+          <span class="rounded bg-neutral-100 px-2 py-0.5 text-sm dark:bg-neutral-800">{t}</span>
+        ))}
+      </div>
+    )}
+    <div class="mt-4 flex gap-4 text-sm">
+      {data.repoUrl && <a href={data.repoUrl} class="hover:underline">GitHub 源码 →</a>}
+      {data.demoUrl && <a href={data.demoUrl} class="hover:underline">在线 Demo →</a>}
+    </div>
+  </article>
+
+  {relatedPosts.length > 0 && (
+    <section class="mt-12">
+      <h2 class="mb-4 text-xl font-semibold">相关文章</h2>
+      <ul class="space-y-2">
+        {relatedPosts.map((post) => (
+          <li>
+            <a href={`/blog/${post.id}/`} class="hover:underline">{post.data.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+</BaseLayout>

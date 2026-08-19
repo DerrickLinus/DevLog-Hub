@@ -1,0 +1,35 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const grouped = new Map<string, CollectionEntry<'posts'>[]>();
+for (const post of posts) {
+  const key = `${post.data.date.getFullYear()} 年 ${post.data.date.getMonth() + 1} 月`;
+  if (!grouped.has(key)) grouped.set(key, []);
+  grouped.get(key)!.push(post);
+}
+---
+
+<BaseLayout title="归档" description="按时间归档">
+  <h1 class="mb-8 text-3xl font-bold">归档</h1>
+  {[...grouped.entries()].map(([month, items]) => (
+    <section class="mb-8">
+      <h2 class="mb-3 text-lg font-semibold">{month}</h2>
+      <ul class="space-y-2">
+        {items.map((post) => (
+          <li class="flex items-baseline justify-between gap-4">
+            <a href={`/blog/${post.slug}/`} class="hover:underline">{post.data.title}</a>
+            <time class="shrink-0 text-sm text-neutral-500">
+              {post.data.date.toLocaleDateString('zh-CN')}
+            </time>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</BaseLayout>

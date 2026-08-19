@@ -1,0 +1,35 @@
+---
+import { profile } from '../data/profile';
+---
+
+<section class="mb-12">
+  <div class="flex items-center gap-4">
+    {profile.avatar ? (
+      <img
+        src={profile.avatar}
+        alt={profile.name}
+        class="h-16 w-16 rounded-full object-cover"
+      />
+    ) : (
+      <div
+        class="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-200 text-2xl dark:bg-neutral-800"
+      >
+        {profile.name.charAt(0)}
+      </div>
+    )}
+    <div>
+      <h1 class="text-2xl font-bold">{profile.name}</h1>
+      <p class="text-neutral-600 dark:text-neutral-400">{profile.bio}</p>
+    </div>
+  </div>
+  <div class="mt-4 flex flex-wrap gap-3">
+    {profile.social.map((s) => (
+      <a
+        href={s.url}
+        class="text-sm text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-400"
+      >
+        {s.label}
+      </a>
+    ))}
+  </div>
+</section>
