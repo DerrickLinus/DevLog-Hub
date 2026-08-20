@@ -7,7 +7,7 @@ import rehypeKatex from 'rehype-katex';
 
 // 上线前将 site 替换为真实域名（或后续改为环境变量注入）
 export default defineConfig({
-  site: 'https://example.com',
+  site: 'https://dev-log-hub.vercel.app',
   output: 'static',
   integrations: [
     tailwind({ applyBaseStyles: false }),
