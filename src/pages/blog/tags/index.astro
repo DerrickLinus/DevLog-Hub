@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import BlogTabs from '../../../components/BlogTabs.astro';
 
 const posts = await getCollection('posts', ({ data }) => !data.draft);
 const tagCounts = new Map<string, number>();
@@ -13,7 +14,8 @@ const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
 ---
 
 <BaseLayout title="标签" description="按标签浏览文章">
-  <h1 class="mb-8 text-3xl font-bold">标签</h1>
+  <h1 class="mb-6 text-3xl font-bold">博客</h1>
+  <BlogTabs active="tags" />
   <div class="flex flex-wrap gap-3">
     {tags.map(([tag, count]) => (
       <a

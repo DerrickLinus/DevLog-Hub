@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import PostLayout from '../../layouts/PostLayout.astro';
+import { getAllSeries } from '../../utils/series';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);
@@ -11,9 +12,16 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
+
+// 若文章属于某个系列，找到该系列信息传给布局渲染文内导航
+const seriesInfo = post.data.series
+  ? (await getAllSeries()).find(
+      (s) => s.entry.id.replace(/\.(json|ya?ml)$/, '') === post.data.series,
+    )
+  : undefined;
 ---
 
-<PostLayout post={post}>
+<PostLayout post={post} headings={headings} series={seriesInfo}>
   <Content />
 </PostLayout>

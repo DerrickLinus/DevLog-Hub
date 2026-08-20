@@ -1,0 +1,95 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+  /** sidebar：桌面左侧粘性侧栏（带左侧指示线）；panel：移动端抽屉/嵌入面板 */
+  variant?: 'sidebar' | 'panel';
+}
+
+const { headings, variant = 'panel' } = Astro.props;
+// 只收录 h2/h3，保持目录简洁
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  toc.length > 0 && (
+    <>
+      {variant === 'sidebar' ? (
+        <ul class="space-y-1 border-l border-neutral-200 dark:border-neutral-800">
+          {toc.map((h) => (
+            <li class:list={[h.depth === 3 && 'pl-4']}>
+              <a
+                href={`#${h.slug}`}
+                data-toc-link
+                class="-ml-px block border-l-2 border-transparent py-1 pl-3 pr-2 text-sm leading-snug text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+              >
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul class="space-y-1">
+          {toc.map((h) => (
+            <li class:list={[h.depth === 3 && 'pl-4']}>
+              <a
+                href={`#${h.slug}`}
+                data-toc-link
+                class="block rounded px-2 py-1.5 text-sm leading-snug text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              >
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
+<script>
+  // —— 高亮：滚动时对应当前章节的目录项加粗（侧栏/抽屉共享 data-toc-link）——
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[data-toc-link]'));
+  const headingEls = Array.from(document.querySelectorAll<HTMLElement>('h2[id], h3[id]'));
+
+  if (links.length > 0 && headingEls.length > 0) {
+    let ticking = false;
+
+    function update() {
+      ticking = false;
+      let activeId = headingEls[0].id;
+      for (const h of headingEls) {
+        if (h.getBoundingClientRect().top <= 100) activeId = h.id;
+        else break;
+      }
+      for (const a of links) {
+        const isActive = a.getAttribute('href') === `#${activeId}`;
+        a.classList.toggle('font-semibold', isActive);
+        a.classList.toggle('text-neutral-900', isActive);
+        a.classList.toggle('dark:text-neutral-100', isActive);
+        a.classList.toggle('text-neutral-500', !isActive);
+        a.classList.toggle('dark:text-neutral-400', !isActive);
+        a.classList.toggle('border-neutral-900', isActive);
+        a.classList.toggle('dark:border-neutral-100', isActive);
+        a.classList.toggle('border-transparent', !isActive);
+      }
+    }
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true },
+    );
+    update();
+  }
+</script>

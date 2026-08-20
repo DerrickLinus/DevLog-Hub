@@ -1,5 +1,6 @@
 ---
 import { profile } from '../data/profile';
+import SocialLinks from './SocialLinks.astro';
 ---
 
 <section class="mb-12">
@@ -22,14 +23,7 @@ import { profile } from '../data/profile';
       <p class="text-neutral-600 dark:text-neutral-400">{profile.bio}</p>
     </div>
   </div>
-  <div class="mt-4 flex flex-wrap gap-3">
-    {profile.social.map((s) => (
-      <a
-        href={s.url}
-        class="text-sm text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-400"
-      >
-        {s.label}
-      </a>
-    ))}
+  <div class="mt-4">
+    <SocialLinks />
   </div>
 </section>

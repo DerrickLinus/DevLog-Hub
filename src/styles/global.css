@@ -7,3 +7,24 @@
     scroll-behavior: smooth;
   }
 }
+
+/* 目录抽屉：默认隐藏；data-open 时显示；xl 及以上始终用左侧侧栏，不显示抽屉 */
+[data-toc-drawer] {
+  display: none;
+}
+[data-toc-drawer][data-open] {
+  display: flex;
+}
+@media (min-width: 1280px) {
+  [data-toc-drawer][data-open] {
+    display: none;
+  }
+}
+
+/* Keep display equations centered while allowing wide derivations to scroll on small screens. */
+.prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+  text-align: center;
+}

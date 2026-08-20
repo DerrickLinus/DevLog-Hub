@@ -3,6 +3,9 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Hero from '../components/Hero.astro';
 import PostCard from '../components/PostCard.astro';
+import ResourceCard from '../components/ResourceCard.astro';
+import SeriesCard from '../components/SeriesCard.astro';
+import { getAllSeries } from '../utils/series';
 
 const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
@@ -11,20 +14,91 @@ const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
 const latest = [
   ...posts.filter((p) => p.data.pinned),
   ...posts.filter((p) => !p.data.pinned),
-].slice(0, 6);
+].slice(0, 4);
+
+const featuredResources = (
+  await getCollection('resources', ({ data }) => data.featured)
+).sort((a, b) => a.data.order - b.data.order);
+
+const projects = (await getCollection('projects')).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+const seriesList = await getAllSeries();
 ---
 
 <BaseLayout>
   <Hero />
-  <section>
+
+  <section class="mb-14">
     <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-xl font-semibold">最新文章</h2>
+      <h2 class="text-xl font-semibold">最新笔记</h2>
       <a href="/blog/" class="text-sm text-neutral-500 hover:underline">查看全部 →</a>
     </div>
     {latest.length > 0 ? (
-      latest.map((post) => <PostCard post={post} />)
+      <div class="grid gap-4">
+        {latest.map((post) => <PostCard post={post} />)}
+      </div>
     ) : (
       <p class="text-neutral-500">还没有文章，先写一篇吧。</p>
     )}
   </section>
+
+  {seriesList.length > 0 && (
+    <section class="mb-14">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-semibold">学习教程</h2>
+        <a href="/series/" class="text-sm text-neutral-500 hover:underline">查看全部 →</a>
+      </div>
+      <div class="grid gap-4">
+        {seriesList.slice(0, 2).map((s) => <SeriesCard series={s} />)}
+      </div>
+    </section>
+  )}
+
+  <div class="grid gap-10 lg:grid-cols-2">
+    {featuredResources.length > 0 && (
+      <section>
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-xl font-semibold">资源推荐</h2>
+          <a href="/resources/" class="text-sm text-neutral-500 hover:underline">全部 →</a>
+        </div>
+        <div class="grid gap-3">
+          {featuredResources.slice(0, 3).map((r) => <ResourceCard resource={r} />)}
+        </div>
+      </section>
+    )}
+
+    {projects.length > 0 && (
+      <section>
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-xl font-semibold">项目</h2>
+          <a href="/projects/" class="text-sm text-neutral-500 hover:underline">全部 →</a>
+        </div>
+        <div class="grid gap-3">
+          {projects.slice(0, 3).map((project) => (
+            <a
+              href={`/projects/${project.id.replace(/\.(json|ya?ml)$/, '')}/`}
+              class="group flex gap-3 rounded-xl border border-neutral-200 p-4 transition-all hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:hover:border-neutral-700"
+            >
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${project.data.repoUrl ? new URL(project.data.repoUrl).hostname : 'github.com'}&sz=64`}
+                alt=""
+                width="24"
+                height="24"
+                loading="lazy"
+                class="mt-0.5 h-6 w-6 shrink-0 rounded"
+              />
+              <div class="min-w-0">
+                <span class="font-medium group-hover:underline">{project.data.name}</span>
+                <p class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-neutral-600 dark:text-neutral-400">
+                  {project.data.summary}
+                </p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
 </BaseLayout>

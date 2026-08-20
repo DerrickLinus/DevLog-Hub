@@ -1,0 +1,73 @@
+---
+import { profile } from '../data/profile';
+
+// 各平台的图标与品牌色（用于标签底色，浅色/暗色自适应）
+const platformStyles: Record<
+  string,
+  { icon: string; badge: string }
+> = {
+  GitHub: {
+    icon: 'M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.15c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.35.95.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.25 5.66.41.35.77 1.05.77 2.12v3.15c0 .3.2.67.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z',
+    badge: 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900',
+  },
+  Instagram: {
+    icon: 'M12 2.2c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92C2.21 15.58 2.2 15.2 2.2 12s.01-3.58.07-4.85C2.42 3.92 3.94 2.38 7.15 2.23 8.42 2.21 8.8 2.2 12 2.2Zm0 3.68a6.12 6.12 0 1 0 0 12.24 6.12 6.12 0 0 0 0-12.24Zm0 10.09a3.97 3.97 0 1 1 0-7.94 3.97 3.97 0 0 1 0 7.94Zm6.36-11.85a1.43 1.43 0 1 0 0 2.86 1.43 1.43 0 0 0 0-2.86Z',
+    badge: 'bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white',
+  },
+  Email: {
+    icon: 'M1.5 4.5h21v15h-21v-15Zm1.5 1.5v.4l9 6.1 9-6.1V6H3Zm18 2.3-9 6.1-9-6.1V18h18V8.3Z',
+    badge: 'bg-blue-600 text-white',
+  },
+  WeChat: {
+    icon: 'M8.69 3.5c-3.9 0-7.07 2.4-7.07 5.36 0 1.73 1.06 3.27 2.69 4.26l-.67 2.01 2.34-1.18c.53.13 1.09.2 1.66.22a5.6 5.6 0 0 1-.14-1.23c0-3.06 3.02-5.54 6.74-5.54.22 0 .44.01.66.03C14.2 5.4 11.7 3.5 8.69 3.5Zm-2.6 3.1a.94.94 0 1 1 0 1.88.94.94 0 0 1 0-1.88Zm5.21 0a.94.94 0 1 1 0 1.88.94.94 0 0 1 0-1.88Zm2.47 3.32c-3.28 0-5.94 2.05-5.94 4.58 0 2.52 2.66 4.57 5.94 4.57.47 0 .93-.05 1.38-.14l2.02 1.02-.58-1.73c1.4-.83 2.16-2.15 2.16-3.72 0-2.53-2.66-4.58-5.98-4.58Zm-2.15 2.66a.81.81 0 1 1 0 1.62.81.81 0 0 1 0-1.62Zm4.3 0a.81.81 0 1 1 0 1.62.81.81 0 0 1 0-1.62Z',
+    badge: 'bg-emerald-500 text-white',
+  },
+  微信: {
+    icon: 'M8.69 3.5c-3.9 0-7.07 2.4-7.07 5.36 0 1.73 1.06 3.27 2.69 4.26l-.67 2.01 2.34-1.18c.53.13 1.09.2 1.66.22a5.6 5.6 0 0 1-.14-1.23c0-3.06 3.02-5.54 6.74-5.54.22 0 .44.01.66.03C14.2 5.4 11.7 3.5 8.69 3.5Zm-2.6 3.1a.94.94 0 1 1 0 1.88.94.94 0 0 1 0-1.88Zm5.21 0a.94.94 0 1 1 0 1.88.94.94 0 0 1 0-1.88Zm2.47 3.32c-3.28 0-5.94 2.05-5.94 4.58 0 2.52 2.66 4.57 5.94 4.57.47 0 .93-.05 1.38-.14l2.02 1.02-.58-1.73c1.4-.83 2.16-2.15 2.16-3.72 0-2.53-2.66-4.58-5.98-4.58Zm-2.15 2.66a.81.81 0 1 1 0 1.62.81.81 0 0 1 0-1.62Zm4.3 0a.81.81 0 1 1 0 1.62.81.81 0 0 1 0-1.62Z',
+    badge: 'bg-emerald-500 text-white',
+  },
+};
+
+const fallback = {
+  icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z',
+  badge: 'bg-neutral-500 text-white',
+};
+
+function styleFor(label: string) {
+  return platformStyles[label] ?? fallback;
+}
+---
+
+<div class="flex flex-wrap items-center gap-2">
+  {profile.social.map((s) => {
+    const { icon, badge } = styleFor(s.label);
+    return s.plain ? (
+      <span
+        title={s.label}
+        class="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-1 pr-3 text-[13px] dark:border-neutral-800 dark:bg-neutral-900"
+      >
+        <span class:list={['inline-flex h-6 w-6 items-center justify-center rounded-full', badge]}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d={icon} />
+          </svg>
+        </span>
+        <span class="select-all font-medium text-neutral-800 dark:text-neutral-200">{s.url}</span>
+      </span>
+    ) : (
+      <a
+        href={s.url}
+        title={s.label}
+        class="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-1 pr-3 text-[13px] transition-colors hover:border-neutral-300 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700 dark:hover:bg-neutral-800"
+      >
+        <span class:list={['inline-flex h-6 w-6 items-center justify-center rounded-full', badge]}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d={icon} />
+          </svg>
+        </span>
+        <span class="font-medium text-neutral-800 dark:text-neutral-200">
+          {s.label === 'GitHub' ? s.url.split('/').pop() : s.url.replace(/^https?:\/\//, '')}
+        </span>
+      </a>
+    );
+  })}
+</div>

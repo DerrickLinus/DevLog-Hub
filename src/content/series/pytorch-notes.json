@@ -1,0 +1,6 @@
+{
+  "title": "PyTorch 学习笔记",
+  "description": "B站小土堆 PyTorch 教程跟学笔记，从环境配置、Tensor 基础到完整模型训练流程。",
+  "status": "ongoing",
+  "order": 1
+}

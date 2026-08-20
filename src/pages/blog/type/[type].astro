@@ -1,0 +1,66 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PostCard from '../../../components/PostCard.astro';
+import SeriesCard from '../../../components/SeriesCard.astro';
+import BlogTabs from '../../../components/BlogTabs.astro';
+import { getAllSeries } from '../../../utils/series';
+
+export async function getStaticPaths() {
+  return [
+    { params: { type: 'article' }, props: { type: 'article' } },
+    { params: { type: 'note' }, props: { type: 'note' } },
+  ];
+}
+
+const { type } = Astro.props;
+
+const posts = (
+  await getCollection('posts', ({ data }) => !data.draft && data.type === type)
+).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const seriesList = type === 'note' ? await getAllSeries() : [];
+const seriesIds = new Set(seriesList.map((s) => s.entry.id.replace(/\.(json|ya?ml)$/, '')));
+
+// 技术文章视图：article 类型 + 不属于系列的独立展示
+// 学习教程视图：note 类型的独立笔记 + 系列聚合卡
+const standalone = posts.filter((p) => !p.data.series || !seriesIds.has(p.data.series));
+
+const seriesWithDate = seriesList
+  .map((s) => ({ s, date: s.latestPost?.data.date.valueOf() ?? 0 }))
+  .sort((a, b) => b.date - a.date);
+
+type Item =
+  | { kind: 'post'; date: number; post: (typeof posts)[number] }
+  | { kind: 'series'; date: number; series: (typeof seriesList)[number] };
+
+const items: Item[] = [
+  ...standalone.map((post) => ({
+    kind: 'post' as const,
+    date: post.data.date.valueOf(),
+    post,
+  })),
+  ...seriesWithDate.map(({ s, date }) => ({
+    kind: 'series' as const,
+    date,
+    series: s,
+  })),
+].sort((a, b) => b.date - a.date);
+
+const titles = { article: '技术文章', note: '学习教程' } as const;
+---
+
+<BaseLayout title={titles[type]} description={`${titles[type]}分类下的所有内容`}>
+  <h1 class="mb-6 text-3xl font-bold">博客</h1>
+  <BlogTabs active={type} />
+
+  {items.length > 0 ? (
+    <div class="grid gap-4">
+      {items.map((item) =>
+        item.kind === 'post' ? <PostCard post={item.post} /> : <SeriesCard series={item.series} />,
+      )}
+    </div>
+  ) : (
+    <p class="text-neutral-500">暂无内容。</p>
+  )}
+</BaseLayout>

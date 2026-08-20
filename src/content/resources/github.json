@@ -1,0 +1,9 @@
+{
+  "title": "GitHub",
+  "url": "https://github.com",
+  "description": "代码托管与开源社区。",
+  "category": "网站",
+  "tags": ["工具", "社区"],
+  "featured": true,
+  "order": 3
+}

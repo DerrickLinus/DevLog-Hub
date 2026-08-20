@@ -1,0 +1,28 @@
+---
+// Pagefind 站内搜索框。需要在构建后执行 `pagefind --site dist` 生成索引。
+---
+<div id="search"></div>
+
+<script is:inline>
+  (function () {
+    // Pagefind 生成的索引挂在 `pagefind/pagefind-ui.js` 下
+    // 用动态注入脚本的方式，避免影响页面加载
+    function loadPagefindUI() {
+      const el = document.getElementById('search');
+      if (!el) return;
+      if (window.PagefindUI) {
+        new window.PagefindUI({ element: '#search', showSubResults: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = '/pagefind/pagefind-ui.js';
+      script.onload = () => el && (el.dataset.__loading = '0');  // 占位，加载后初始化在下方
+      document.head.appendChild(script);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadPagefindUI);
+    } else {
+      loadPagefindUI();
+    }
+  })();
+</script>

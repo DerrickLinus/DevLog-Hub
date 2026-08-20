@@ -1,53 +1,130 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import Comments from '../components/Comments.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+import SeriesNav from '../components/SeriesNav.astro';
+import { readingTime } from '../utils/readingTime';
 import type { CollectionEntry } from 'astro:content';
+import type { SeriesInfo } from '../utils/series';
 
 interface Props {
   post: CollectionEntry<'posts'>;
+  headings: { depth: number; slug: string; text: string }[];
+  /** 文章所属系列（无则不渲染文内系列导航） */
+  series?: SeriesInfo;
 }
 
-const { post } = Astro.props;
+const { post, headings, series } = Astro.props;
 const { data } = post;
+const minutes = readingTime(post.body ?? '');
+const hasToc = headings.some((h) => h.depth === 2 || h.depth === 3);
 ---
 
-<BaseLayout title={data.title} description={data.description} type="article">
-  <article>
-    <header class="mb-8">
-      <h1 class="text-3xl font-bold tracking-tight">{data.title}</h1>
-      <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-neutral-500">
-        <time datetime={data.date.toISOString()}>
-          {data.date.toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </time>
-        {data.updatedAt && (
-          <span>更新于 {data.updatedAt.toLocaleDateString('zh-CN')}</span>
-        )}
-        <span class="rounded bg-neutral-100 px-1.5 py-0.5 text-xs dark:bg-neutral-800">
-          {data.type}
-        </span>
-      </div>
-    </header>
-
-    <div class="prose prose-neutral max-w-none dark:prose-invert">
-      <slot />
-    </div>
-
-    {data.tags.length > 0 && (
-      <footer
-        class="mt-10 flex flex-wrap gap-2 border-t border-neutral-200 pt-6 dark:border-neutral-800"
-      >
-        {data.tags.map((tag) => (
-          <a
-            href={`/blog/tag/${encodeURIComponent(tag)}/`}
-            class="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-600 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
-          >
-            #{tag}
-          </a>
-        ))}
-      </footer>
+<BaseLayout title={data.title} description={data.description} type="article" wide>
+  <div class="xl:grid xl:grid-cols-[16rem_minmax(0,42rem)_minmax(0,1fr)] xl:gap-16">
+    {/* 桌面：左侧粘性目录侧栏（TOC 组件自带 sticky 容器在 xl 布局列里） */}
+    {hasToc && (
+      <aside class="hidden xl:block">
+        <div class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">目录</p>
+          <TableOfContents headings={headings} variant="sidebar" />
+        </div>
+      </aside>
     )}
-  </article>
+
+    <article class="min-w-0">
+      <header class="mb-8">
+        <h1 class="text-3xl font-bold tracking-tight">{data.title}</h1>
+        <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-neutral-500">
+          <time datetime={data.date.toISOString()}>
+            {data.date.toLocaleDateString('zh-CN', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </time>
+          {data.updatedAt && (
+            <span>更新于 {data.updatedAt.toLocaleDateString('zh-CN')}</span>
+          )}
+          <span class="rounded bg-neutral-100 px-1.5 py-0.5 text-xs dark:bg-neutral-800">
+            {data.type}
+          </span>
+          <span title="预计阅读时间">约 {minutes} 分钟</span>
+        </div>
+      </header>
+
+      {series && <SeriesNav series={series} currentSlug={post.slug} />}
+
+      <div class="prose prose-neutral max-w-none dark:prose-invert">
+        <slot />
+      </div>
+
+      {data.tags.length > 0 && (
+        <footer
+          class="mt-10 flex flex-wrap gap-2 border-t border-neutral-200 pt-6 dark:border-neutral-800"
+        >
+          {data.tags.map((tag) => (
+            <a
+              href={`/blog/tag/${encodeURIComponent(tag)}/`}
+              class="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-600 hover:text-neutral-900 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
+            >
+              #{tag}
+            </a>
+          ))}
+        </footer>
+      )}
+    </article>
+  </div>
+  <Comments />
+
+  {hasToc && (
+    <>
+      {/* 移动端：右下角浮动按钮 */}
+      <button
+        type="button"
+        data-toc-fab
+        aria-label="打开目录"
+        class="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg transition-transform hover:scale-105 dark:bg-neutral-100 dark:text-neutral-900 xl:hidden"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="16" y2="12" />
+          <line x1="4" y1="18" x2="12" y2="18" />
+        </svg>
+      </button>
+
+      {/* 移动端：底部抽屉（display 由 global.css 的 [data-toc-drawer] 规则控制，避免 Tailwind hidden/flex 与 hidden 属性冲突） */}
+      <div
+        data-toc-drawer
+        class="fixed inset-0 z-50 items-end bg-black/40 backdrop-blur-sm"
+      >
+        <div class="max-h-[60vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 pb-8 shadow-2xl dark:bg-neutral-900">
+          <div class="mx-auto mb-4 h-1 w-10 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">目录</p>
+          <TableOfContents headings={headings} variant="panel" />
+        </div>
+      </div>
+
+      <script>
+        const drawer = document.querySelector<HTMLElement>('[data-toc-drawer]');
+        const fab = document.querySelector<HTMLButtonElement>('[data-toc-fab]');
+
+        function closeDrawer() {
+          drawer?.removeAttribute('data-open');
+        }
+
+        fab?.addEventListener('click', () => {
+          drawer?.toggleAttribute('data-open');
+        });
+        drawer?.addEventListener('click', (e) => {
+          if (e.target === drawer || (e.target as HTMLElement).closest('a[data-toc-link]')) {
+            closeDrawer();
+          }
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeDrawer();
+        });
+      </script>
+    </>
+  )}
 </BaseLayout>

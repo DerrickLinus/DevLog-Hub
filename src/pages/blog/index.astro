@@ -2,16 +2,58 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
+import SeriesCard from '../../components/SeriesCard.astro';
+import BlogTabs from '../../components/BlogTabs.astro';
+import { getAllSeries } from '../../utils/series';
 
 const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
+
+const seriesList = await getAllSeries();
+const seriesIds = new Set(seriesList.map((s) => s.entry.id.replace(/\.(json|ya?ml)$/, '')));
+
+// 独立文章 = 不属于任何系列
+const standalone = posts.filter((p) => !p.data.series || !seriesIds.has(p.data.series));
+
+// 各系列最新一篇的日期，用于系列卡在时间线中的排序
+const seriesWithDate = seriesList
+  .map((s) => ({ s, date: s.latestPost?.data.date.valueOf() ?? 0 }))
+  .sort((a, b) => b.date - a.date);
+
+// 混合时间线：独立文章与系列卡按时间交错
+type Item =
+  | { kind: 'post'; date: number; post: (typeof posts)[number] }
+  | { kind: 'series'; date: number; series: (typeof seriesList)[number] };
+
+const items: Item[] = [
+  ...standalone.map((post) => ({
+    kind: 'post' as const,
+    date: post.data.date.valueOf(),
+    post,
+  })),
+  ...seriesWithDate.map(({ s, date }) => ({
+    kind: 'series' as const,
+    date,
+    series: s,
+  })),
+].sort((a, b) => b.date - a.date);
 ---
 
-<BaseLayout title="博客" description="所有文章">
-  <h1 class="mb-8 text-3xl font-bold">博客</h1>
-  {posts.length > 0 ? (
-    posts.map((post) => <PostCard post={post} />)
+<BaseLayout title="博客" description="所有文章与学习笔记">
+  <h1 class="mb-6 text-3xl font-bold">博客</h1>
+  <BlogTabs active="all" />
+
+  {items.length > 0 ? (
+    <div class="grid gap-4">
+      {items.map((item) =>
+        item.kind === 'post' ? (
+          <PostCard post={item.post} />
+        ) : (
+          <SeriesCard series={item.series} />
+        ),
+      )}
+    </div>
   ) : (
     <p class="text-neutral-500">暂无文章。</p>
   )}

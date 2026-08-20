@@ -1,0 +1,13 @@
+---
+// Umami 统计组件：website-id 未配置时不注入脚本（本地开发/未上线阶段保持干净）。
+const {
+  PUBLIC_UMAMI_WEBSITE_ID: websiteId,
+  PUBLIC_UMAMI_SRC: src = 'https://analytics.umami.is/script.js',
+} = import.meta.env;
+
+const enabled = Boolean(websiteId);
+---
+
+{enabled && (
+  <script is:inline defer src={src} data-website-id={websiteId}></script>
+)}

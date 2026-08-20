@@ -14,7 +14,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <h2>联系方式</h2>
     <ul>
       {profile.social.map((s) => (
-        <li><a href={s.url}>{s.label}</a></li>
+        <li>
+          {s.plain ? (
+            <span>{s.label}：<span class="select-all">{s.url}</span></span>
+          ) : (
+            <a href={s.url}>{s.label}</a>
+          )}
+        </li>
       ))}
     </ul>
   </div>

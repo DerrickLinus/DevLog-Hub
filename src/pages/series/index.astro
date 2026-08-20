@@ -1,0 +1,22 @@
+---
+import { getAllSeries } from '../../utils/series';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SeriesCard from '../../components/SeriesCard.astro';
+
+const seriesList = await getAllSeries();
+---
+
+<BaseLayout title="学习教程" description="系统性学习笔记与教程系列">
+  <h1 class="mb-2 text-3xl font-bold">学习教程</h1>
+  <p class="mb-8 text-neutral-500 dark:text-neutral-400">
+    针对教程或主题的系统学习笔记，按系列连载。
+  </p>
+
+  {seriesList.length > 0 ? (
+    <div class="grid gap-4 sm:grid-cols-2">
+      {seriesList.map((s) => <SeriesCard series={s} />)}
+    </div>
+  ) : (
+    <p class="text-neutral-500">还没有系列，去写第一篇吧。</p>
+  )}
+</BaseLayout>

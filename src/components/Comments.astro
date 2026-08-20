@@ -1,0 +1,36 @@
+---
+// Giscus 评论组件：所有配置来自环境变量（.env / Vercel），缺任一关键项则整块不渲染。
+const {
+  PUBLIC_GISCUS_REPO: repo,
+  PUBLIC_GISCUS_REPO_ID: repoId,
+  PUBLIC_GISCUS_CATEGORY: category,
+  PUBLIC_GISCUS_CATEGORY_ID: categoryId,
+} = import.meta.env;
+
+const enabled = Boolean(repo && repoId && category && categoryId);
+---
+
+{enabled && (
+  <section class="mt-12 border-t border-neutral-200 pt-8 dark:border-neutral-800">
+    <h2 class="mb-4 text-xl font-semibold">评论</h2>
+    <div class="giscus"></div>
+    <script
+      is:inline
+      src="https://giscus.app/client.js"
+      data-repo={repo}
+      data-repo-id={repoId}
+      data-category={category}
+      data-category-id={categoryId}
+      data-mapping="pathname"
+      data-strict="0"
+      data-reactions-enabled="1"
+      data-emit-metadata="0"
+      input-position="top"
+      data-theme="preferred_color_scheme"
+      data-lang="zh-CN"
+      data-loading="lazy"
+      crossorigin="anonymous"
+      async
+    ></script>
+  </section>
+)}

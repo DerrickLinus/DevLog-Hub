@@ -1,0 +1,9 @@
+{
+  "title": "MDN Web Docs",
+  "url": "https://developer.mozilla.org/zh-CN/",
+  "description": "Mozilla 官方 Web 技术文档，HTML/CSS/JS 权威参考。",
+  "category": "文档",
+  "tags": ["Web", "前端"],
+  "featured": true,
+  "order": 1
+}

@@ -1,0 +1,9 @@
+{
+  "title": "Astro 官方文档",
+  "url": "https://docs.astro.build/zh-cn/",
+  "description": "本站所用框架的官方文档（中文）。",
+  "category": "文档",
+  "tags": ["Astro", "框架"],
+  "featured": true,
+  "order": 2
+}

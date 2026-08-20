@@ -3,18 +3,22 @@ import '../styles/global.css';
 import 'katex/dist/katex.min.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Analytics from '../components/Analytics.astro';
 import { profile } from '../data/profile';
 
 interface Props {
   title?: string;
   description?: string;
   type?: 'website' | 'article';
+  /** 文章页使用：容器加宽以容纳右侧 TOC 侧栏 */
+  wide?: boolean;
 }
 
 const {
   title = `${profile.name} · ${profile.siteName}`,
   description = profile.bio,
   type = 'website',
+  wide = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -30,6 +34,7 @@ const ogImage = new URL('/og.png', Astro.site);
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="application/rss+xml" title={profile.siteName} href={new URL('rss.xml', Astro.site)} />
     <meta name="generator" content={Astro.generator} />
     <meta property="og:type" content={type} />
     <meta property="og:title" content={title} />
@@ -49,7 +54,13 @@ const ogImage = new URL('/og.png', Astro.site);
     class="min-h-screen bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100"
   >
     <Header />
-    <main class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+    <Analytics />
+    <main
+      class:list={[
+        'mx-auto w-full max-w-4xl px-4 py-10 sm:px-6',
+        wide && 'xl:max-w-6xl',
+      ]}
+    >
       <slot />
     </main>
     <Footer />

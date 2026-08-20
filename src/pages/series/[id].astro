@@ -1,0 +1,78 @@
+---
+import { getAllSeries, seriesSlug } from '../../utils/series';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import StatusBadge from '../../components/SeriesStatusBadge.astro';
+
+export async function getStaticPaths() {
+  const seriesList = await getAllSeries();
+  return seriesList.map((s) => ({
+    params: { id: seriesSlug(s.entry) },
+    props: { series: s },
+  }));
+}
+
+const { series } = Astro.props;
+const { entry, posts } = series;
+const statusLabel = entry.data.status === 'ongoing' ? '连载中' : '已完结';
+---
+
+<BaseLayout title={entry.data.title} description={entry.data.description}>
+  <header class="mb-10">
+    <a
+      href="/series/"
+      class="text-sm text-neutral-500 hover:underline"
+    >
+      ← 全部系列
+    </a>
+    <div class="mt-3 flex flex-wrap items-center gap-3">
+      <h1 class="text-3xl font-bold">{entry.data.title}</h1>
+      <StatusBadge status={entry.data.status} />
+    </div>
+    {entry.data.description && (
+      <p class="mt-3 max-w-2xl text-neutral-600 dark:text-neutral-400">
+        {entry.data.description}
+      </p>
+    )}
+    <p class="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+      共 {posts.length} 篇 · {statusLabel}
+      {series.latestPost &&
+        ` · 最近更新 ${series.latestPost.data.date.toLocaleDateString('zh-CN')}`}
+    </p>
+  </header>
+
+  {/* 时间轴：按学习顺序（seriesOrder）排列，ep01 在最上 */}
+  <ol class="relative space-y-6 border-l border-neutral-200 dark:border-neutral-800">
+    {posts.map((p, i) => (
+      <li class="relative pl-8">
+        <span
+          class:list={[
+            'absolute -left-[7px] top-1 h-3.5 w-3.5 rounded-full border-2',
+            i === posts.length - 1
+              ? 'border-amber-400 bg-amber-400 dark:border-amber-500'
+              : 'border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-950',
+          ]}
+          title={i === posts.length - 1 ? '最新' : undefined}
+        />
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span class="text-xs tabular-nums text-neutral-400">
+            {p.data.date.toLocaleDateString('zh-CN')}
+          </span>
+          {i === posts.length - 1 && (
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+              NEW
+            </span>
+          )}
+        </div>
+        <a
+          href={`/blog/${p.slug}/`}
+          class="mt-0.5 block text-lg font-medium leading-snug hover:underline"
+        >
+          {p.data.title}
+        </a>
+        <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+          {p.data.description}
+        </p>
+      </li>
+    ))}
+  </ol>
+</BaseLayout>
