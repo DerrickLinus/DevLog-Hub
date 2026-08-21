@@ -2,7 +2,7 @@
 
 我的个人技术博客：记录技术文章、学习笔记、资源收藏与项目积累。
 
-**🌐 线上地址**：[dev-log-hub.vercel.app](https://dev-log-hub.vercel.app)
+**🌐 线上地址**：[dlhblog.com](https://dlhblog.com)
 
 ## 网站内容
 

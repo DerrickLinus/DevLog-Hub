@@ -1,7 +1,7 @@
 # DevLog Hub 运维手册
 
 > 面向站长（自己）的长期维护手册：日常工作流、数据查看、域名升级、评论管理。
-> 线上地址：https://dev-log-hub.vercel.app · 仓库：DerrickLinus/DevLog-Hub
+> 线上地址：https://dlhblog.com · 仓库：DerrickLinus/DevLog-Hub
 
 ---
 
