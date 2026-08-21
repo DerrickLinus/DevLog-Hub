@@ -32,7 +32,7 @@ const seriesList = await getAllSeries();
 
   <section class="mb-14">
     <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-xl font-semibold">最新笔记</h2>
+      <h2 class="text-xl font-semibold">最新文章</h2>
       <a href="/blog/" class="text-sm text-neutral-500 hover:underline">查看全部 →</a>
     </div>
     {latest.length > 0 ? (
@@ -47,7 +47,7 @@ const seriesList = await getAllSeries();
   {seriesList.length > 0 && (
     <section class="mb-14">
       <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-xl font-semibold">学习教程</h2>
+        <h2 class="text-xl font-semibold">系列笔记</h2>
         <a href="/series/" class="text-sm text-neutral-500 hover:underline">查看全部 →</a>
       </div>
       <div class="grid gap-4">
@@ -72,7 +72,7 @@ const seriesList = await getAllSeries();
     {projects.length > 0 && (
       <section>
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-xl font-semibold">项目</h2>
+          <h2 class="text-xl font-semibold">项目积累</h2>
           <a href="/projects/" class="text-sm text-neutral-500 hover:underline">全部 →</a>
         </div>
         <div class="grid gap-3">

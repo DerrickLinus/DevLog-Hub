@@ -8,7 +8,7 @@ const projects = (await getCollection('projects')).sort(
 ---
 
 <BaseLayout title="项目" description="项目积累">
-  <h1 class="mb-8 text-3xl font-bold">项目</h1>
+  <h1 class="mb-8 text-3xl font-bold">项目积累</h1>
   <div class="space-y-6">
     {projects.map((project) => (
       <article class="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
