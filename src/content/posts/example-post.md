@@ -1,7 +1,7 @@
 ---
 title: 示例文章：Hello, World
 description: 这是一篇示例文章，用来验证博客的渲染效果。你可以把自己的 Markdown 文件放进 src/content/posts/ 后替换它。
-date: 2026-08-19
+date: 2026-01-01
 tags: [示例, 入门]
 category: article
 type: article
