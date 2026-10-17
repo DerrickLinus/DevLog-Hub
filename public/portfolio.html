@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>求职作品集 · 开源贡献与项目清单</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+:root{
+  --ink:#14181a;
+  --muted:#5b6663;
+  --line:#d6dbd5;
+  --line-soft:#e6eae5;
+  --accent:#0e6350;
+  --accent-bg:#e7f1ec;
+  --code-bg:#f0f2ef;
+  --code-ink:#22302c;
+}
+@page{ size:A4; margin:15mm 14mm 15mm 14mm; }
+*{ box-sizing:border-box; }
+html,body{ background:#fff; }
+body{
+  margin:0;
+  font-family:"Noto Sans SC","Microsoft YaHei","PingFang SC",-apple-system,"Segoe UI",sans-serif;
+  font-size:10.5pt;
+  line-height:1.75;
+  color:var(--ink);
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+  text-rendering:optimizeLegibility;
+}
+h1,h2,h3,h4{
+  font-family:"Noto Serif SC","Source Han Serif SC","Microsoft YaHei",serif;
+  line-height:1.4;
+  break-after:avoid-page;
+  page-break-after:avoid;
+}
+h1{
+  font-size:19pt;
+  margin:0 0 .6em;
+  padding-bottom:.35em;
+  border-bottom:2px solid var(--accent);
+  letter-spacing:.01em;
+}
+h2{
+  font-size:14pt;
+  margin:1.9em 0 .7em;
+  padding-bottom:.3em;
+  border-bottom:1px solid var(--line);
+}
+h3{
+  font-size:11.5pt;
+  margin:1.5em 0 .5em;
+}
+h3:first-of-type{ margin-top:1em; }
+p{ margin:.7em 0; }
+strong{ font-weight:700; }
+hr{
+  border:0;
+  border-top:1px dashed var(--line);
+  margin:1.6em 0;
+}
+blockquote{
+  margin:1em 0;
+  padding:.75em 1em;
+  background:var(--accent-bg);
+  border-left:3px solid var(--accent);
+  border-radius:0 3px 3px 0;
+  font-size:10pt;
+  color:#26332f;
+}
+blockquote p{ margin:.3em 0; }
+ul,ol{ margin:.6em 0; padding-left:1.5em; }
+li{ margin:.3em 0; break-inside:avoid; page-break-inside:avoid; }
+li > ul, li > ol{ margin:.25em 0; }
+a{ color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(14,99,80,.35); }
+code{
+  font-family:"JetBrains Mono",Consolas,"Courier New",monospace;
+  font-size:.88em;
+  background:var(--code-bg);
+  color:var(--code-ink);
+  padding:.1em .35em;
+  border-radius:3px;
+  word-break:break-word;
+}
+pre{
+  background:var(--code-bg);
+  border:1px solid var(--line-soft);
+  border-radius:4px;
+  padding:.8em 1em;
+  overflow-x:auto;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+pre code{ background:none; padding:0; font-size:9pt; }
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:1em 0;
+  font-size:9.5pt;
+  break-inside:auto;
+}
+thead{ display:table-header-group; }
+th,td{
+  border:1px solid var(--line);
+  padding:.5em .7em;
+  text-align:left;
+  vertical-align:top;
+}
+th{
+  background:#eef2ee;
+  font-weight:700;
+  white-space:nowrap;
+}
+tbody tr{ break-inside:avoid; page-break-inside:avoid; }
+td code{ font-size:.85em; }
+
+/* 屏幕预览时给一点版心留白，方便确认再打印 */
+@media screen{
+  body{ max-width:820px; margin:0 auto; padding:32px 24px 64px; }
+}
+</style>
+</head>
+<body>
+<h1>作品集 · 开源贡献与项目清单</h1>
+<blockquote>
+<p><strong>GitHub</strong>：<a href="https://github.com/DerrickLinus">https://github.com/DerrickLinus</a></p>
+</blockquote>
+<hr>
+<h2>一、开源贡献 · Tencent/WeKnora（34.1k star 开源 RAG / Agent 平台）</h2>
+<p>排查起点：同一套 ReAct agent 在 GLM-5.3、DeepSeek-V4.1-Flash 下出现答案不生成、思考死循环、重复渲染卡死，而 Qwen 一切正常。结论不是&quot;智能体没针对模型调优&quot;，而是<strong>harness 工程缺陷被特定模型行为触发</strong>——共定位 5 项根因，全部附可复查的 upstream 链接。</p>
+<hr>
+<h3>1. 思考强度档位在 Harness 层被静默丢弃　<code>✅ 已合入上游</code></h3>
+<p>配置页提供六档思考强度，选项也确实传到后端，但 wire 层只发出一个 <code>enable_thinking</code> 布尔，<strong>六个档位一档都没生效</strong>；对不认识该布尔的中转后端，&quot;关闭&quot;档同样是谎言选项。根因是能力声明层（<code>Capabilities()</code>）按&quot;missing key = 支持&quot;的语义虚报档位，而请求编码层只能表达一个布尔，两方各说各话且都不报错。</p>
+<p><strong>本人贡献</strong>：#3551 独立发现并完成四层取证（行为 A/B → UI 请求预览 → wire 逐字节对比 → 同 url/key 的 provider 对照实验）；实现 #3552 并被维护者 squash merge 进上游 main（commit <code>a9d71038</code>，4 files +114 行，含 4 个先红后绿测试）；review 轮响应维护者指出的 opt-in 组合不一致并当日修复；同 issue 的撞车 PR #3628 被维护者关闭（<code>Closing in favour of #3552</code>）。</p>
+<ul>
+<li>PR（merged）：<a href="https://github.com/Tencent/WeKnora/pull/3552">https://github.com/Tencent/WeKnora/pull/3552</a></li>
+<li>Issue：<a href="https://github.com/Tencent/WeKnora/issues/3551">https://github.com/Tencent/WeKnora/issues/3551</a></li>
+<li>📎 <strong>完整失败分析（执行过程 / 根因判断 / 修复方案 / 验证结果）</strong>：<a href="agent-failure-analysis.html">failure-analysis-thinking-levels.html</a></li>
+</ul>
+<hr>
+<h3>2. 前端答案跨轮堆叠与浏览器卡死　<code>✅ 修复方案与本人一致并被上游采纳</code></h3>
+<p>ReAct 每轮新建 answer 事件时会<strong>继承上一轮事件的全部文本</strong>再追加，叠加打字机&quot;目标变短即归零重打&quot;与每帧全文 markdown 重解析，导致答案反复从头渲染，第 N 轮接近立方级工作量，最终主线程饱和、窗口无响应。</p>
+<p><strong>本人贡献</strong>：issue #3383 提出者——根因分析被采纳，上游修复 PR 与本地方案<strong>逐字符一致</strong>；在 #3386 担任独立验证者（A/B 实测&quot;卸下守卫 5/5 堆叠 vs 装回 0 复制&quot;、守卫日志取证 38512 字符恶劣场景），归因部分被作者写入 PR 描述。</p>
+<ul>
+<li>上游落地：<a href="https://github.com/Tencent/WeKnora/pull/3386">https://github.com/Tencent/WeKnora/pull/3386</a>（squash <code>30171451</code>）</li>
+<li>本人报告：<a href="https://github.com/Tencent/WeKnora/issues/3383">https://github.com/Tencent/WeKnora/issues/3383</a></li>
+</ul>
+<hr>
+<h3>3. 快速问答 length 静默截断：零答案、零错误　<code>✅ 已闭环</code></h3>
+<p>混合推理模型的思考 token 与正文共享同一预算，思考烧尽预算后 <code>finish_reason=length</code>、answer 通道为空，但整条链路对 length <strong>零检测</strong>——发一个空事件即标记&quot;正常完成&quot;，用户看到&quot;已引用 2 篇文档&quot;后没有下文。</p>
+<p><strong>本人贡献</strong>：issue #3509 提出者（file:line 根因链 + A/B 对照证据，后被证明是社区实现 PR 的蓝本）；PR #3515 由社区贡献者按该规格实现并当日合并，本人完成 <strong>post-merge 真机验证</strong>（兜底文案出现、<code>truncated:true</code> 全链路落库生效）与 diff 复审，发现 fallback 路径的同款缺口。</p>
+<ul>
+<li>本人报告：<a href="https://github.com/Tencent/WeKnora/issues/3509">https://github.com/Tencent/WeKnora/issues/3509</a></li>
+<li>社区实现：<a href="https://github.com/Tencent/WeKnora/pull/3515">https://github.com/Tencent/WeKnora/pull/3515</a>（merged <code>78d7d862</code>）</li>
+</ul>
+<hr>
+<h3>4. GLM/Zhipu 无 provider adapter，无法关闭思考　<code>✅ 上游已以更深方案落地（本人独立推导一致）</code></h3>
+<p>provider 注册表没有智谱适配，请求落到默认的&quot;什么都不发&quot;策略，模型默认持续思考；而智谱对&quot;关闭思考&quot;直连会报 1210 错误——这是一个<strong>没有正确配置可抄</strong>的跨厂商契约问题。</p>
+<p><strong>本人贡献</strong>：本地复现 1210 + 官方 API 五组 curl 实测定参，独立推导出&quot;<code>off</code> 映射 <code>null</code>、永不发 <code>disabled</code>&quot;的设计；上游 #3470/#3489 以 vendor 层重建落地后，本人完成真机验证（目录命中、<code>off:null</code> 生效、thinking-format 正确）；并由此延伸发现 provider=generic 的存量迁移陷阱（见第 1 条）。</p>
+<ul>
+<li>上游实现：<a href="https://github.com/Tencent/WeKnora/pull/3470">https://github.com/Tencent/WeKnora/pull/3470</a></li>
+</ul>
+<hr>
+<h3>5. 截断答案&quot;续写&quot;，但前半部分丢失　<code>🔍 已定位（上游以终止方案覆盖）</code></h3>
+<p><code>length</code> 不被视为自然停止，半截答案进入消息历史，模型下一轮自发&quot;补全剩余内容&quot;——但前端把第一轮答案当 preamble 标记 superseded 丢弃，<strong>模型看得到前半部分，用户看不到</strong>。</p>
+<p><strong>本人贡献</strong>：定位完整机制链（length 非自然停止 → 截断答案进历史 → preamble 被丢弃），并作为 #3362 现场证据的独立佐证；上游以&quot;终止本轮 + 截断标记&quot;方案覆盖，本人转 post-merge 验证。</p>
+<hr>
+<h2>二、Agent Demo · 山野游伴：动物园智能游伴 Agent</h2>
+<p><strong>仓库</strong>：<a href="https://github.com/DerrickLinus/zoom-champion-agent">https://github.com/DerrickLinus/zoom-champion-agent</a>　|　<code>FastAPI · Qwen · React 19 · NetworkX</code></p>
+<h3>项目背景</h3>
+<p>南京红山森林动物园是国内少数<strong>坚持不靠动物表演、以动物福利为经营底线</strong>的城市动物园，因此面对传统景区共有的可持续性困境：客流成倍增长，人力密集型讲解无法承载；而园区真正有价值的内容——公众号文章、场馆讲解词、饲养员的日常记录——散落在各处，游客无法深度体验这些故事。</p>
+<h3>项目简介</h3>
+<p>「山野游伴」用一句话解决上述矛盾：用户说&quot;我带着 3 岁孩子，只有 2 小时，怕晒，不想爬山，想看灵长类&quot;，它就规划出约束内的路线并解释为什么这样安排；游中说一句&quot;累了&quot;或&quot;这个馆太挤了&quot;，实时调整剩余行程；到馆后由人格化&quot;动物搭子&quot;讲解并支持语音问答；整条路线还能变成一场边走边玩的互动故事。</p>
+<p><strong>核心设计主张：不让大模型编造路线。</strong> LLM 只负责它擅长的两件事——理解（自然语言 → 结构化需求）与表达（解释、讲解、叙事）；流程调度由确定性 Orchestrator 状态机完成，路线在加权拓扑图（14 节点 / 20 边，含距离、坡度、遮荫率、拥挤度）上用 Dijkstra + 贪心插入计算。</p>
+<h3>运行效果</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>实测结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>意图解析准确率</td>
+<td>24 条中文口语评测集：Qwen <strong>100%（24/24）</strong>；规则兜底 54.2%</td>
+</tr>
+<tr>
+<td>约束回归测试</td>
+<td>9 项全绿（时间预算不超限、必去保留、避开生效、非法 POI 拦截、重规划保留已访问节点等），0.4s</td>
+</tr>
+<tr>
+<td>路线规划延迟</td>
+<td>P50 <strong>3.2ms</strong> / P95 3.9ms（180 次 × 3 组偏好画像，含 HTTP 往返）</td>
+</tr>
+<tr>
+<td>事件重规划延迟</td>
+<td>P50 <strong>3.6ms</strong> / P95 4.0ms（40 次）</td>
+</tr>
+<tr>
+<td>游中动态调整</td>
+<td>疲劳、饥饿、提前离园、拥堵等 <strong>8 类事件</strong>触发剩余路线局部重规划，固定已访问节点</td>
+</tr>
+<tr>
+<td>讲解与语音</td>
+<td>4 套差异化 persona 游伴，知识片段检索注入 + 语音提问（ASR）与朗读（TTS）</td>
+</tr>
+<tr>
+<td>降级能力</td>
+<td><strong>拔掉 API Key 系统照样能跑</strong>：Qwen → 规则解析、百炼问答 → 本地知识库、TTS → 浏览器合成</td>
+</tr>
+<tr>
+<td>前端</td>
+<td>React 移动端高保真原型，11 个页面、5 个动物搭子角色、NPC 任务与印章体系</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>三、技术博客 · DevLog-Hub</h2>
+<p><strong>仓库</strong>：<a href="https://github.com/DerrickLinus/DevLog-Hub">https://github.com/DerrickLinus/DevLog-Hub</a>　|　<strong>线上</strong>：<a href="https://dlhblog.com/">https://dlhblog.com/</a></p>
+<p><strong>简介</strong>：个人技术博客，承载技术文章、系列教程、资源收藏与项目展示四个板块。支持 Markdown 写作与 Content Collections 类型安全、亮暗主题、<strong>Pagefind 中文全文搜索</strong>、Giscus 评论、RSS 订阅、KaTeX 公式与 Shiki 双主题代码高亮、阅读时长与粘性目录、移动端目录抽屉；纯静态输出、默认零 JS，Lighthouse 表现友好。</p>
+<p><strong>技术栈</strong>：Astro 5（静态生成）· TypeScript · Tailwind CSS · Astro Content Collections · Pagefind · Giscus · Umami · Vercel（push 即自动构建上线）</p>
+<p><strong>开发情况</strong>：<strong>使用 AI 三天完成从脚手架到完整网站功能的交付上线</strong>（2026-08-19 首个 <code>init: astro blog scaffold</code> 提交 → 08-21 内容体系与域名切换收尾）。AI 承担脚手架搭建与功能实现，本人负责技术选型、内容架构设计与上线验收——完整的 AI 辅助全栈交付闭环。</p>
+<hr>
+<h2>附：链接索引</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>内容</th>
+<th>链接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>思考档位虚报 · PR（merged <code>a9d71038</code>）</td>
+<td><a href="https://github.com/Tencent/WeKnora/pull/3552">https://github.com/Tencent/WeKnora/pull/3552</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>思考档位虚报 · Issue</td>
+<td><a href="https://github.com/Tencent/WeKnora/issues/3551">https://github.com/Tencent/WeKnora/issues/3551</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td>思考档位虚报 · 完整失败分析（HTML）</td>
+<td><a href="agent-failure-analysis.html">2026-10-15-agent-failure-analysis-thinking-levels copy.html</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>前端堆叠与卡死 · 上游修复 PR</td>
+<td><a href="https://github.com/Tencent/WeKnora/pull/3386">https://github.com/Tencent/WeKnora/pull/3386</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>前端堆叠与卡死 · 本人报告</td>
+<td><a href="https://github.com/Tencent/WeKnora/issues/3383">https://github.com/Tencent/WeKnora/issues/3383</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td>快速问答静默截断 · 本人报告</td>
+<td><a href="https://github.com/Tencent/WeKnora/issues/3509">https://github.com/Tencent/WeKnora/issues/3509</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td>快速问答静默截断 · 社区实现 PR</td>
+<td><a href="https://github.com/Tencent/WeKnora/pull/3515">https://github.com/Tencent/WeKnora/pull/3515</a></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Agent Demo · 山野游伴</td>
+<td><a href="https://github.com/DerrickLinus/zoom-champion-agent">https://github.com/DerrickLinus/zoom-champion-agent</a></td>
+</tr>
+<tr>
+<td>9</td>
+<td>技术博客 · DevLog-Hub</td>
+<td><a href="https://github.com/DerrickLinus/DevLog-Hub">https://github.com/DerrickLinus/DevLog-Hub</a> · <a href="https://dlhblog.com/">https://dlhblog.com/</a></td>
+</tr>
+</tbody></table>
+<hr>
+<p><em>开源贡献部分的所有状态均以 upstream 的 PR / commit / issue 链接为准，可逐条复查。</em></p>
+
+</body>
+</html>

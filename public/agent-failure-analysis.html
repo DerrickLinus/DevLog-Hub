@@ -1,0 +1,1045 @@
+<title>思考档位静默丢弃</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ------------------------------------------------------------------
+   设计计划
+   色彩：冷调灰绿纸面 + 深松绿 accent（在这个故事里 accent 的含义就是
+        “真的生效了”）+ 锈红作为缺陷标记。语义色与 accent 分离。
+   字体：Noto Serif SC 标题 / Noto Sans SC 正文 / JetBrains Mono 数据与 wire
+   布局：单栏测量宽度（68ch）正文，证据块向左出血到 mono 标签栏，
+        用“信号轨”细线做分节，呼应 wire 取证这一主题。
+------------------------------------------------------------------- */
+:root{
+  --bg:         #F4F6F3;
+  --surface:    #FFFFFF;
+  --surface-2:  #EDF0EC;
+  --ink:        #14181A;
+  --muted:      #5B6663;
+  --line:       #D6DBD5;
+  --line-soft:  #E6EAE5;
+  --accent:     #0E6350;
+  --accent-ink: #0A4A3C;
+  --accent-bg:  #E2EFE9;
+  --alarm:      #9E3B26;
+  --alarm-bg:   #F6E7E2;
+  --code-bg:    #EFF2EE;
+  --code-ink:   #22302C;
+
+  --font-display: "Noto Serif SC", "Songti SC", Georgia, serif;
+  --font-body:    "Noto Sans SC", "PingFang SC", -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", "Noto Sans SC", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --fs-xs:   0.75rem;
+  --fs-sm:   0.875rem;
+  --fs-base: 1.02rem;
+  --fs-lg:   1.18rem;
+  --fs-xl:   1.5rem;
+  --fs-2xl:  2rem;
+  --fs-3xl:  2.7rem;
+
+  --measure: 66ch;
+  --gutter:  20px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:         #0E1112;
+    --surface:    #151A1B;
+    --surface-2:  #1B2122;
+    --ink:        #E5E9E7;
+    --muted:      #97A2A0;
+    --line:       #29302F;
+    --line-soft:  #1F2526;
+    --accent:     #57C3A4;
+    --accent-ink: #83D8BF;
+    --accent-bg:  #14322B;
+    --alarm:      #E08972;
+    --alarm-bg:   #33211C;
+    --code-bg:    #131819;
+    --code-ink:   #D4DCD8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:         #0E1112;
+  --surface:    #151A1B;
+  --surface-2:  #1B2122;
+  --ink:        #E5E9E7;
+  --muted:      #97A2A0;
+  --line:       #29302F;
+  --line-soft:  #1F2526;
+  --accent:     #57C3A4;
+  --accent-ink: #83D8BF;
+  --accent-bg:  #14322B;
+  --alarm:      #E08972;
+  --alarm-bg:   #33211C;
+  --code-bg:    #131819;
+  --code-ink:   #D4DCD8;
+  color-scheme: dark;
+}
+
+*{ box-sizing: border-box; }
+
+/* `.wire__pair` 是 display:grid，作者样式会盖掉浏览器对 [hidden] 的
+   默认 display:none，导致两个面板同时显示、切换按钮看起来失效。 */
+[hidden]{ display: none !important; }
+
+body{
+  margin: 0;
+  padding-inline: var(--gutter);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.78;
+  -webkit-font-smoothing: antialiased;
+}
+
+a{ color: var(--accent-ink); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 3px; }
+a:hover{ text-decoration-color: var(--accent); }
+a:focus-visible, button:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding-block: 12px;
+  padding-inline: var(--gutter);
+  margin-inline: calc(var(--gutter) * -1);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.topbar__name{
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  letter-spacing: .01em;
+}
+.topbar__spacer{ flex: 1 1 auto; }
+.topbar__link{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .02em;
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  padding-bottom: 1px;
+}
+
+/* ---------- 版心 ---------- */
+.wrap{
+  max-width: calc(var(--measure) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-block: 0 6rem;
+}
+.wrap > * + *{ margin-top: 2.6rem; }
+
+/* ---------- 首屏 ---------- */
+.hero{ padding-block: 3.4rem 0; }
+.eyebrow{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+.hero h1{
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-3xl);
+  line-height: 1.22;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+  margin: .7rem 0 0;
+}
+.hero__sub{
+  font-size: var(--fs-lg);
+  color: var(--muted);
+  margin: 1rem 0 0;
+  max-width: 54ch;
+  text-wrap: pretty;
+}
+.facts{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin-top: 2.2rem;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.fact{ background: var(--surface); padding: .85rem 1rem; min-width: 0; }
+.fact dt{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fact dd{
+  margin: .3rem 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.fact dd .mono{ font-family: var(--font-mono); font-size: .82em; }
+
+/* ---------- 结论块 ---------- */
+.thesis{
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 1.4rem 1.5rem;
+  border-radius: 0 4px 4px 0;
+}
+.thesis p{ margin: 0; }
+.thesis p + p{ margin-top: .8rem; }
+.thesis strong{ font-weight: 700; }
+
+/* ---------- 分节 ---------- */
+.sec{ scroll-margin-top: 4rem; }
+.sec__head{ display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; }
+.sec__num{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .1em;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 2px;
+  padding: 1px 6px;
+  flex: none;
+}
+.sec h2{
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-2xl);
+  line-height: 1.3;
+  text-wrap: balance;
+  margin: 0;
+}
+.sec__rule{
+  height: 1px;
+  margin-top: .9rem;
+  background: repeating-linear-gradient(to right, var(--line) 0 6px, transparent 6px 12px);
+}
+.sec__body{ margin-top: 1.6rem; }
+.sec__body > * + *{ margin-top: 1.15rem; }
+
+h3{
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  line-height: 1.5;
+  margin: 2.2rem 0 0;
+  text-wrap: balance;
+}
+h3:first-child{ margin-top: 0; }
+p{ margin: 0; }
+ul, ol{ margin: 0; padding-left: 1.3rem; }
+li + li{ margin-top: .45rem; }
+code{
+  font-family: var(--font-mono);
+  font-size: .86em;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: .12em .38em;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 步骤流水 ---------- */
+.steps{ list-style: none; padding: 0; counter-reset: step; }
+.step{
+  position: relative;
+  padding-left: 3.1rem;
+  padding-bottom: 1.7rem;
+}
+.step::before{
+  counter-increment: step;
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 0; top: .12rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 50%;
+  width: 2rem; height: 2rem;
+  display: grid; place-items: center;
+}
+.step::after{
+  content: "";
+  position: absolute;
+  left: 1rem; top: 2.3rem; bottom: .2rem;
+  width: 1px;
+  background: var(--line);
+}
+.step:last-child{ padding-bottom: 0; }
+.step:last-child::after{ display: none; }
+.step h4{
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  margin: 0 0 .5rem;
+  line-height: 1.6;
+}
+.step > * + *{ margin-top: .7rem; }
+
+/* ---------- 表格 ---------- */
+.scroll{
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: var(--surface);
+}
+table{ border-collapse: collapse; width: 100%; font-size: var(--fs-sm); }
+caption{
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .06em;
+  color: var(--muted);
+  padding: .7rem 1rem .1rem;
+}
+th, td{
+  text-align: left;
+  padding: .6rem .95rem;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+thead th{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+tbody tr:last-child td{ border-bottom: 0; }
+td.num{ font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hit{ color: var(--alarm); font-weight: 700; }
+
+/* ---------- 代码 ---------- */
+.code{
+  position: relative;
+  background: var(--code-bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.code__label{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .06em;
+  color: var(--muted);
+  padding: .5rem .9rem .35rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+.code pre{
+  margin: 0;
+  padding: .8rem .95rem .95rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.65;
+  color: var(--code-ink);
+  tab-size: 2;
+}
+.code__body{
+  padding: .8rem 0 .95rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--code-ink);
+}
+.ln{ white-space: pre; padding-inline: .95rem; }
+.ln--ins{ background: var(--accent-bg); color: var(--accent-ink); }
+.key{ color: var(--alarm); font-weight: 500; }
+.hi{ color: var(--accent-ink); font-weight: 500; }
+.code--alarm{ border-color: color-mix(in srgb, var(--alarm) 32%, transparent); }
+
+/* ---------- wire 取证面板 ---------- */
+.wire{ border: 1px solid var(--line-soft); border-radius: 4px; background: var(--surface); overflow: hidden; }
+.wire__tabs{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: .7rem;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2);
+}
+.tab{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .03em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: .35rem .7rem;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.tab:hover{ color: var(--ink); }
+.tab[aria-selected="true"]{
+  color: var(--accent-ink);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-bg);
+}
+.wire__panes{ padding: .9rem; display: grid; gap: .85rem; }
+.wire__pair{ display: grid; gap: .7rem; }
+.verdict{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .5rem;
+  font-size: var(--fs-sm);
+  padding: .6rem .8rem;
+  border-radius: 3px;
+}
+.verdict--alarm{ background: var(--alarm-bg); color: var(--alarm); }
+.verdict--ok{ background: var(--accent-bg); color: var(--accent-ink); }
+.verdict__tag{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .85;
+  flex: none;
+}
+.wire__note{ font-size: var(--fs-sm); color: var(--muted); }
+
+/* ---------- 根因链 ---------- */
+.chain{ display: grid; gap: 0; }
+.link{
+  display: grid;
+  grid-template-columns: 2.1rem 1fr;
+  gap: 0 1rem;
+}
+.link__rail{ display: grid; justify-items: center; }
+.link__dot{
+  width: .6rem; height: .6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: .62rem;
+}
+.link--bad .link__dot{ background: var(--alarm); }
+.link__line{ width: 1px; background: var(--line); flex: 1; min-height: 1.1rem; }
+.link:last-child .link__line{ display: none; }
+.link__body{ padding-bottom: 1.35rem; min-width: 0; }
+.link:last-child .link__body{ padding-bottom: 0; }
+.link__title{ font-weight: 700; }
+.link__meta{
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.link__text{ margin-top: .35rem; font-size: var(--fs-sm); }
+
+/* ---------- 结论贴片 ---------- */
+.note{
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: .95rem 1.1rem;
+  border-radius: 0 4px 4px 0;
+  font-size: var(--fs-sm);
+}
+.note--alarm{ border-left-color: var(--alarm); }
+.note strong{ font-weight: 700; }
+
+/* ---------- 页脚 ---------- */
+.foot{
+  border-top: 1px solid var(--line-soft);
+  padding-top: 1.6rem;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.foot ul{ list-style: none; padding: 0; display: grid; gap: .5rem; }
+.foot .mono{ font-family: var(--font-mono); font-size: .86em; overflow-wrap: anywhere; }
+
+@media (max-width: 620px){
+  :root{ --fs-3xl: 2.05rem; --fs-2xl: 1.6rem; --gutter: 16px; }
+  .hero{ padding-block: 2.2rem 0; }
+  .step{ padding-left: 2.7rem; }
+  .link{ grid-template-columns: 1.4rem 1fr; gap: 0 .7rem; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}
+</style>
+
+<header class="topbar">
+  <span class="topbar__name">思考档位静默丢弃</span>
+  <span class="topbar__spacer"></span>
+  <a class="topbar__link" href="https://github.com/Tencent/WeKnora/pull/3552" target="_blank" rel="noopener">PR #3552 ↗</a>
+  <a class="topbar__link" href="https://github.com/Tencent/WeKnora/issues/3551" target="_blank" rel="noopener">Issue #3551 ↗</a>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 首屏 ============ -->
+  <section class="hero">
+    <p class="eyebrow">Agent 失败分析 · Harness 方向</p>
+    <h1>思考强度档位在 Harness 层被静默丢弃</h1>
+    <p class="hero__sub">
+      用户把 agent 的思考强度调到最低，预算反而被推理烧光。没有报错，没有异常，UI 一切正常——
+      只有 agent 的行为和配置对不上。
+    </p>
+
+    <dl class="facts">
+      <div class="fact">
+        <dt>项目</dt>
+        <dd>Tencent/WeKnora<br><span class="mono">开源 RAG / Agent 平台</span></dd>
+      </div>
+      <div class="fact">
+        <dt>我的角色</dt>
+        <dd>独立发现 · 四层取证 · 根因定位 · 实现与测试 · PR 合入</dd>
+      </div>
+      <div class="fact">
+        <dt>交付</dt>
+        <dd><a href="https://github.com/Tencent/WeKnora/pull/3552" target="_blank" rel="noopener">PR #3552</a><br><span class="mono">merged · 4 files · +114</span></dd>
+      </div>
+      <div class="fact">
+        <dt>上游 commit</dt>
+        <dd class="mono">a9d71038</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ============ 摘要 ============ -->
+  <div class="thesis">
+    <p>
+      六档思考强度（关闭 / 自动 / 极低 / 低 / 中 / 高）在 UI 上真实可选，选项也确实传到了后端，
+      但出站请求体里没有任何 effort 字段——<strong>一档都没生效</strong>。
+    </p>
+    <p>
+      根因是一次 <strong>Harness 层的契约断裂</strong>：能力声明层
+      （<code>Capabilities()</code>）按「missing key = 支持并原样透传」的语义虚报了六个档位；
+      请求编码层（<code>applyThinking()</code>）对 <code>chat-template-kwargs</code> 线格式
+      只能表达一个布尔。两方各说各话，中间没有任何一方报错。
+    </p>
+    <p>
+      修复让能力声明层只承诺编码层真正能表达的东西，并补齐 opt-in 路径下的 effort 编码。
+      已合入上游 <code>main</code>；同一 issue 下另一份竞品 PR 被维护者以
+      <em>Closing in favour of #3552</em> 关闭。
+    </p>
+  </div>
+
+  <!-- ============ 一、执行过程 ============ -->
+  <section class="sec" id="process">
+    <div class="sec__head">
+      <span class="sec__num">一</span>
+      <h2>执行过程</h2>
+    </div>
+    <div class="sec__rule"></div>
+
+    <div class="sec__body">
+      <p>
+        环境是 WeKnora 官方 <code>main</code> 镜像（<code>d6c7665c</code>）、Docker Compose 部署，
+        模型行走中转站（DMXAPI，OpenAI 兼容网关）+ <code>glm-5.3</code>——一个混合推理模型。
+        症状很难直接归因：没有错误、没有异常栈，只有「agent 的行为和配置对不上」。
+        这正是 agent harness 类缺陷里最难查的一种。
+      </p>
+
+      <ol class="steps">
+        <li class="step">
+          <h4>行为层 A/B：确认档位确实无效</h4>
+          <p>固定任务、固定预算，六个档位各跑一次（4096 预算组）：</p>
+          <div class="scroll">
+            <table>
+              <caption>六档 A/B · 4096 预算组</caption>
+              <thead>
+                <tr><th>档位</th><th>耗时</th><th>思考轮数</th><th>观察</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>关闭</td><td class="num">5m34s</td><td class="num">17</td><td>—</td></tr>
+                <tr><td>自动</td><td class="num">5m15s</td><td class="num">14</td><td>—</td></tr>
+                <tr><td>极低</td><td class="num">6m24s</td><td class="num">13</td><td class="hit">预算被思考烧尽，只生成一个「我」字</td></tr>
+                <tr><td>低</td><td class="num">3m52s</td><td class="num">16</td><td>—</td></tr>
+                <tr><td>中</td><td class="num">5m38s</td><td class="num">20</td><td>—</td></tr>
+                <tr><td>高</td><td class="num">5m48s</td><td class="num">13</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            档位之间没有任何可归因的差异。10000 / 20000 预算组复跑，结论相同：完整性差异全部由预算大小解释。
+          </p>
+          <div class="note note--alarm">
+            第一个关键判断：「极低」档<strong>没有节省推理预算，反而把预算烧光导致输出截断</strong>——
+            说明降档请求根本没有到达模型，而不是「模型不听话」。
+          </div>
+        </li>
+
+        <li class="step">
+          <h4>UI 层取证：排除「前端没传」</h4>
+          <p>
+            查请求预览（<code>handler/model.go:448</code>），抽屉发出的
+            <code>options.reasoning_effort</code> 确实分别是 <code>minimal</code> / <code>high</code>。
+            选项已经正确到达后端——问题被夹在「后端收到选项」和「出站请求编码」之间。
+          </p>
+        </li>
+
+        <li class="step">
+          <h4>Wire 层逐字节取证</h4>
+          <p>
+            开启 <code>WEKNORA_LLM_STREAM_RAW_DUMP=1</code> 抓出站请求体，同一模型行分别选「极低」和「高」各发一次。
+            切换下面的 provider 对照：
+          </p>
+
+          <div class="wire">
+            <div class="wire__tabs" role="tablist" aria-label="wire 请求体对照">
+              <button class="tab" role="tab" id="tab-generic" aria-controls="pane-generic" aria-selected="true" data-pane="pane-generic">generic provider · 修复前</button>
+              <button class="tab" role="tab" id="tab-zhipu" aria-controls="pane-zhipu" aria-selected="false" data-pane="pane-zhipu">zhipu provider · 对照</button>
+            </div>
+
+            <div class="wire__panes">
+              <div class="wire__pair" id="pane-generic" role="tabpanel" aria-labelledby="tab-generic">
+                <div class="code code--alarm">
+                  <div class="code__label">极低档 · 出站请求体</div>
+                  <pre>{"chat_template_kwargs":{"enable_thinking":true},"max_tokens":1024,
+ "model":"glm-5.3-guan","stream":true,
+ "stream_options":{"include_usage":true},"temperature":0.7,"top_p":1}</pre>
+                </div>
+                <div class="code code--alarm">
+                  <div class="code__label">高档 · 出站请求体</div>
+                  <pre>{"chat_template_kwargs":{"enable_thinking":true},"max_tokens":1024,
+ "model":"glm-5.3-guan","stream":true,
+ "stream_options":{"include_usage":true},"temperature":0.7,"top_p":1}</pre>
+                </div>
+                <div class="verdict verdict--alarm">
+                  <span class="verdict__tag">逐字节相同</span>
+                  <span>两份请求体不存在任何 effort 字段。响应侧吻合：四次请求的 <code>completion_tokens</code> 全部为 <strong>145</strong>，输出逐字相同。</span>
+                </div>
+              </div>
+
+              <div class="wire__pair" id="pane-zhipu" role="tabpanel" aria-labelledby="tab-zhipu" hidden>
+                <div class="code">
+                  <div class="code__label">极低档 · 出站请求体</div>
+                  <pre>{"max_tokens":1024,"model":"glm-5.3",<span class="hi">"reasoning_effort":"low"</span>,
+ "stream":true,"stream_options":{"include_usage":true},
+ "temperature":0.7,"thinking":{"type":"enabled"},"top_p":1}</pre>
+                </div>
+                <div class="code">
+                  <div class="code__label">高档 · 出站请求体</div>
+                  <pre>{"max_tokens":1024,"model":"glm-5.3",<span class="hi">"reasoning_effort":"high"</span>,
+ "stream":true,"stream_options":{"include_usage":true},
+ "temperature":0.7,"thinking":{"type":"enabled"},"top_p":1}</pre>
+                </div>
+                <div class="verdict verdict--ok">
+                  <span class="verdict__tag">差异可见</span>
+                  <span>effort 立刻出现在 wire 上，且中转站 DMXAPI 未拒绝、正常返回。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <li class="step">
+          <h4>对照实验：把责任锁死在本地编码层</h4>
+          <p>
+            保持 url / key / 模型完全不变，<strong>只把该模型行的 <code>provider</code> 从 <code>generic</code> 改成 <code>zhipu</code></strong>，
+            档位差异立刻出现在 wire 上。再跑 58 份 dump 做统计：wire 上只出现过
+            <code>low</code> / <code>high</code> / <code>max</code> 三个值（目录里的 per-model ladder 把
+            minimal→low、medium→high、xhigh→max 折叠），即六档 UI 实际只有三组 wire 配置。
+            按 wire 值重新分组后，思考量与耗时严格单调：
+          </p>
+          <div class="scroll">
+            <table>
+              <caption>58 份 dump 按 wire 值分组 · 10000 预算</caption>
+              <thead>
+                <tr><th>wire 值</th><th>dump 数</th><th>思考轮数</th><th>耗时</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="mono">reasoning_effort=low</td><td class="num">18</td><td class="num">≈4.5 轮</td><td class="num">≈1m08s</td></tr>
+                <tr><td class="mono">reasoning_effort=high</td><td class="num">13</td><td class="num">≈6 轮</td><td class="num">≈1m34s</td></tr>
+                <tr><td class="mono">reasoning_effort=max</td><td class="num">25</td><td class="num">≈12.5 轮</td><td class="num">≈4m47s</td></tr>
+                <tr><td class="mono">generic 布尔（无 effort）</td><td class="num">2</td><td class="num">—</td><td class="num">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="wire__note">
+            组内差异属同配置采样噪声与 agent 工具序列随机性（每组 n=2，小样本，作为佐证而非统计结论）。
+          </p>
+          <div class="note">
+            这一步同时排除了两个假设：不是模型不响应 effort，也不是中转站剥离字段。
+            <strong>同样的 url、同样的 key、同样的模型，换个 provider 就正常了</strong>——
+            责任精确落在 WeKnora 自己的请求编码路径上。
+          </div>
+        </li>
+
+        <li class="step">
+          <h4>代码路径逐层核对</h4>
+          <p>沿「UI 选项 → capabilities → 请求编码」三层读代码，得到完整的四环根因链。</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ 二、根因判断 ============ -->
+  <section class="sec" id="rootcause">
+    <div class="sec__head">
+      <span class="sec__num">二</span>
+      <h2>根因判断</h2>
+    </div>
+    <div class="sec__rule"></div>
+
+    <div class="sec__body">
+      <div class="chain">
+        <div class="link">
+          <div class="link__rail"><span class="link__dot"></span><span class="link__line"></span></div>
+          <div class="link__body">
+            <div class="link__title">落点：中转站用户默认就是 generic</div>
+            <div class="link__meta">ModelEditorDialog.vue:1235</div>
+            <div class="link__text">建模表单默认 <code>provider: 'generic'</code>——用户填 url + 模型名 + key 保存即落入 generic。</div>
+          </div>
+        </div>
+
+        <div class="link">
+          <div class="link__rail"><span class="link__dot"></span><span class="link__line"></span></div>
+          <div class="link__body">
+            <div class="link__title">空 map：generic 行的模型名不在任何目录里</div>
+            <div class="link__meta">catalog/resolve.go:95-98</div>
+            <div class="link__text"><code>cataloged:false</code> → 合成空 spec，<code>ThinkingLevelMap</code> 是一个<strong>空 map</strong>。</div>
+          </div>
+        </div>
+
+        <div class="link link--bad">
+          <div class="link__rail"><span class="link__dot"></span><span class="link__line"></span></div>
+          <div class="link__body">
+            <div class="link__title">虚报：空 map 撞上「missing key = 支持」的语义</div>
+            <div class="link__meta">api/types.go:220-231 · catalog/resolve.go:367</div>
+            <div class="link__text">
+              <code>Supports()</code> 的 missing-key 语义是「支持、按原名透传」→ <code>SupportedLevels()</code>
+              如实返回六档 → <code>Capabilities()</code> 把六档交给前端。
+              前端以 <code>capabilities.thinking_levels</code> 为唯一权威渲染选择器。
+            </div>
+          </div>
+        </div>
+
+        <div class="link link--bad">
+          <div class="link__rail"><span class="link__dot"></span><span class="link__line"></span></div>
+          <div class="link__body">
+            <div class="link__title">丢弃：编码层只写得出一个布尔</div>
+            <div class="link__meta">openaicompletions/request.go:382-383 · :341</div>
+            <div class="link__text">
+              <code>applyThinking</code> 的 chat-template-kwargs 分支<strong>只写 <code>enable_thinking</code> 布尔</strong>；
+              且 generic 的 <code>SupportsReasoningEffort</code> 默认 false，
+              <code>if enabled &amp;&amp; level.Graded() &amp;&amp; s.SupportsReasoningEffort</code> 不成立，
+              <strong>effort 根本不被计算</strong>。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note note--alarm">
+        责任链闭环在后端：<strong>后端虚报 → 前端如实渲染 → 用户选择 → wire 静默丢弃</strong>，
+        没有任何一方报错。
+      </div>
+
+      <h3>为什么不是别的东西</h3>
+      <div class="scroll">
+        <table>
+          <caption>被排除的假设与依据</caption>
+          <thead>
+            <tr><th>假设</th><th>结论</th><th>依据</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>模型不支持降档</td><td>排除</td><td>同模型换 provider=zhipu 后档位立即生效</td></tr>
+            <tr><td>中转站剥离了 effort</td><td>排除</td><td>DMXAPI 接受并透传，58 份 dump 分组单调</td></tr>
+            <tr><td>前端没把选项传下去</td><td>排除</td><td>请求预览证明选项已到达后端</td></tr>
+            <tr><td>应该由前端隐藏档位</td><td>排除</td><td>前端以 capabilities 为 authoritative，后端诚实化后前端与所有 API 消费者自动正确</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>缺陷的本质</h3>
+      <p>
+        <code>Supports()</code> 的 missing-key 语义本身是合理的——它服务于「已收录但未列全档位」的 vendor。
+        问题出在能力声明层<strong>直接复用了这个语义，去回答一个它回答不了的问题</strong>：
+        「这条链路能让用户选这个档位吗？」回答它需要同时知道线格式能表达什么，而
+        <code>Capabilities()</code> 只看 vendor map。这是典型的<strong>契约信息缺失</strong>。
+      </p>
+      <div class="note">
+        对 agent harness 而言这类缺陷格外危险：思考强度直接决定每一轮 ReAct 的 token 消耗。
+        能力层虚报档位，等于告诉用户「你可以控制成本与延迟」，而 agent 永远跑在最高推理强度上——
+        成本预算、延迟预期、乃至任务能否跑完，全部失控。
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 三、修复方案 ============ -->
+  <section class="sec" id="fix">
+    <div class="sec__head">
+      <span class="sec__num">三</span>
+      <h2>修复方案</h2>
+    </div>
+    <div class="sec__rule"></div>
+
+    <div class="sec__body">
+      <h3>方案 A（PR 主体）：能力声明层只承诺可表达的东西</h3>
+      <p>
+        在线格式是纯布尔开关、且未 opt-in <code>supports_reasoning_effort</code> 时，
+        <code>Capabilities()</code> 出口只保留非 graded 档位（<code>off</code> / <code>auto</code>）：
+      </p>
+      <div class="code">
+        <div class="code__label">internal/models/runtime/resolve.go</div>
+        <div class="code__body">
+          <div class="ln">caps.ThinkingLevels = r.ThinkingLevels.SupportedLevels()</div>
+          <div class="ln ln--ins">+ // A chat-template switch carries only the enable_thinking boolean: every</div>
+          <div class="ln ln--ins">+ // graded rung is silently dropped on the wire (and a relay backend that</div>
+          <div class="ln ln--ins">+ // does not know enable_thinking drops the boolean too), so the selector</div>
+          <div class="ln ln--ins">+ // must not offer rungs the request cannot express. Vendors that opt into</div>
+          <div class="ln ln--ins">+ // a top-level effort field keep their ladders (#3489 moved its NIM</div>
+          <div class="ln ln--ins">+ // entries to that shape).</div>
+          <div class="ln ln--ins">+ if r.API == api.APIOpenAICompletions &amp;&amp;</div>
+          <div class="ln ln--ins">+     r.OpenAICompletions.ThinkingFormat == api.ThinkingFormatChatTemplateKwargs &amp;&amp;</div>
+          <div class="ln ln--ins">+     !r.OpenAICompletions.SupportsReasoningEffort {</div>
+          <div class="ln ln--ins">+     keep := make([]api.ReasoningEffort, 0, 2)</div>
+          <div class="ln ln--ins">+     for _, level := range caps.ThinkingLevels {</div>
+          <div class="ln ln--ins">+         if !level.Graded() {</div>
+          <div class="ln ln--ins">+             keep = append(keep, level)</div>
+          <div class="ln ln--ins">+         }</div>
+          <div class="ln ln--ins">+     }</div>
+          <div class="ln ln--ins">+     caps.ThinkingLevels = keep</div>
+          <div class="ln ln--ins">+ }</div>
+        </div>
+      </div>
+      <ul>
+        <li><strong>保留 off / auto</strong>：<code>enable_thinking:false</code> 对 Qwen 系 vLLM / SGLang 自托管模型是真实开关（generic 的本义场景），砍掉会误伤；<code>Capabilities()</code> 无法知道后端是谁，只保留布尔能表达的两档。</li>
+        <li><strong>条件里带 <code>!SupportsReasoningEffort</code></strong>：只收敛纯布尔场景，不误伤「format=chat-template-kwargs 但 effort 走顶层」的组合（#3489 给 NVIDIA NIM entry 选的就是这个形状）。</li>
+        <li><strong>vendor map 不动</strong>：修的是出口而不是事实来源，跨厂商目录不受影响。</li>
+      </ul>
+
+      <h3>方案 B（review 后提前兑现）：opt-in 时把 effort 写到 wire 上</h3>
+      <p>
+        原本作为「方向 2」放在 issue 里讨论——让显式选择 graded 档时同时上行顶层
+        <code>reasoning_effort</code>。依据是 vLLM 文档明确接受与本项目相同的 ladder 并据此注入
+        <code>enable_thinking</code>。
+      </p>
+      <p>
+        <strong>维护者在 review 里把它提成了合并条件</strong>，因为他抓出方案 A 的一个自相矛盾：
+        我在注释里为「未来组合」留了 <code>!SupportsReasoningEffort</code>（capabilities 保留 ladder），
+        但 <code>applyThinking</code> 的对应分支仍然不发 effort——于是那个组合
+        <strong>依然是每档请求体逐字节相同</strong>，同一个缺陷换了个形状活着。
+      </p>
+      <div class="code">
+        <div class="code__label">internal/models/api/openaicompletions/request.go · 6ddf571a</div>
+        <div class="code__body">
+          <div class="ln">case api.ThinkingFormatChatTemplateKwargs:</div>
+          <div class="ln">    body["chat_template_kwargs"] = map[string]any{"enable_thinking": enabled}</div>
+          <div class="ln ln--ins">+   if effort != "" {</div>
+          <div class="ln ln--ins">+       body[effortField] = effort</div>
+          <div class="ln ln--ins">+   }</div>
+        </div>
+      </div>
+      <div class="note">
+        这次 review 迭代比修复本身更有价值：<strong>我预留的「未来组合」被证明不是一个未来问题，
+        而是当下就存在的同源缺陷</strong>——出口收敛必须与编码路径成对修改，只改一边就是把 bug 藏起来。
+      </div>
+
+      <h3>方案 C（issue 中讨论，不做实现）</h3>
+      <p>
+        provider=generic 时按模型名跨全目录反查，命中则提示或借用 catalog 事实，降低中转站用户
+        「必须知道要选官方 provider」的知识门槛。风险是 relays 可能挂羊头卖狗肉（模型名 ≠ 实际后端），
+        属于新的越权猜测，需要产品侧决策，因此只作为长期 UX 方向记录。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 四、验证结果 ============ -->
+  <section class="sec" id="verify">
+    <div class="sec__head">
+      <span class="sec__num">四</span>
+      <h2>验证结果</h2>
+    </div>
+    <div class="sec__rule"></div>
+
+    <div class="sec__body">
+      <h3>先红后绿：测试先于实现</h3>
+      <p>按「先写红测试、再写实现」的顺序执行。修复前的失败输出：</p>
+      <div class="code code--alarm">
+        <div class="code__label">go test ./internal/models/catalog/ — 修复前</div>
+        <pre><span class="key">--- FAIL: TestResolve_BooleanThinkingSwitchHidesGradedLevels</span>
+    expected: []api.ReasoningEffort{"off", "auto"}
+    actual  : []api.ReasoningEffort{"off", "auto", "minimal", "low", "medium", "high"}
+    Messages: only the boolean the switch can carry</pre>
+      </div>
+      <p>四个用例覆盖：</p>
+      <div class="scroll">
+        <table>
+          <caption>测试矩阵</caption>
+          <thead>
+            <tr><th>用例</th><th>覆盖</th><th>修复前</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>T1</td><td>generic 未收录行的六档虚报</td><td class="hit">红</td></tr>
+            <tr><td>T2</td><td>cataloged 行配了 ladder 却走布尔线格式的五档虚报</td><td class="hit">红</td></tr>
+            <tr><td>T3</td><td>opt-in 组合保留 ladder（守护）</td><td>绿</td></tr>
+            <tr><td>T4</td><td>golden：graded 请求不泄漏 <code>reasoning_effort</code>（守护）</td><td>绿</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>全量回归</h3>
+      <p>
+        <code>go test ./...</code> 与改动前基线逐项对照：失败项经 <code>git stash</code> 对照确认为
+        <strong>基线固有的环境问题</strong>（<code>sqlite3.h</code> 缺失导致 cmd/* build 失败、
+        本机 Python 环境导致一个 skill 测试失败），与本次改动无关；<code>./internal/models/...</code>
+        全树绿色。改动期间的两次上游同步（22 + 11 commit）均做了撞车核查，零命中。
+      </p>
+
+      <h3>端到端复验</h3>
+      <ul>
+        <li>修复前后 UI 对照：DMXAPI（generic）行的档位选择器从六档收敛为 关闭 / 自动，不再提供无法生效的选项；</li>
+        <li>回归确认：vLLM 自托管行、已收录 zhipu 行、<code>enable_thinking</code> 格式的 qwen 行行为均不变；</li>
+        <li>wire 复验：58 份 dump 的分组单调性在改动后保持。</li>
+      </ul>
+
+      <h3>上线结果</h3>
+      <div class="scroll">
+        <table>
+          <caption>上游交付</caption>
+          <thead>
+            <tr><th>项</th><th>结果</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PR</td>
+              <td><a href="https://github.com/Tencent/WeKnora/pull/3552" target="_blank" rel="noopener">#3552</a> · 5 commits · 4 files · +114 / −0</td>
+            </tr>
+            <tr>
+              <td>合并</td>
+              <td>2026-09-25 由维护者 squash merge 进入上游 <code>main</code>，commit <code>a9d71038</code></td>
+            </tr>
+            <tr>
+              <td>Issue</td>
+              <td><a href="https://github.com/Tencent/WeKnora/issues/3551" target="_blank" rel="noopener">#3551</a> 由 <code>Fixes:</code> 关键字自动关闭</td>
+            </tr>
+            <tr>
+              <td>竞品 PR</td>
+              <td>另一贡献者针对同一 issue 提交的 #3628 被维护者关闭并留言 <em>Closing in favour of #3552</em></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>过程中的两处工程细节</h3>
+      <ul>
+        <li>
+          <strong>上游重构冲突</strong>：合并前上游 #3589 把 <code>catalog</code> 包拆成
+          <code>api</code> / <code>providers</code> / <code>runtime</code> 三个包，与我的三个改动文件直接冲突，
+          且 GitHub 网页端冲突解决不可用（文件被改名挪位）。本地 <code>merge origin/main</code> 解决：
+          唯一内容冲突在 <code>request.go</code>（保留 effort 透传 + 常量包名变更），另手工适配三处旧 API 引用。
+          <strong>选 merge 而非 rebase</strong>——避免 force-push 让 review 评论失去代码定位。
+        </li>
+        <li>
+          <strong>跨包重构下的语义对齐</strong>：包拆分后 <code>Capabilities()</code> 从 <code>catalog</code>
+          迁到 <code>runtime</code>。我核对确认收敛逻辑的语义未变（仍以线格式表达能力为准），
+          而非机械地跟随文件移动。
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 五、能力对照 ============ -->
+  <section class="sec" id="skills">
+    <div class="sec__head">
+      <span class="sec__num">五</span>
+      <h2>这次分析对应的 Harness 方向能力</h2>
+    </div>
+    <div class="sec__rule"></div>
+
+    <div class="sec__body">
+      <div class="scroll">
+        <table>
+          <caption>能力与本次分析的对应</caption>
+          <thead>
+            <tr><th>能力</th><th>本次分析的体现</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>定位 agent 静默失败</td>
+              <td>症状是「没有报错、只是行为不符合配置」——通过「UI 选项 → 请求编码 → 模型行为」逐层收敛，把模糊症状转成可证伪的断言</td>
+            </tr>
+            <tr>
+              <td>跨厂商 wire 契约</td>
+              <td>处理了 <code>enable_thinking</code> 布尔 / <code>thinking:{type}</code> / <code>chat_template_kwargs</code> / 顶层 <code>reasoning_effort</code> 四种思考表达形式，以及 relay 网关对未知字段的容忍边界</td>
+            </tr>
+            <tr>
+              <td>声明与实现的一致性</td>
+              <td>识别出「capabilities 是前端 authoritative 来源」这一契约，把修复放在出口而非 UI；并意识到出口收敛必须与编码路径成对修改</td>
+            </tr>
+            <tr>
+              <td>agent 预算与推理成本</td>
+              <td>把「思考强度档位」还原为「每轮 ReAct 的推理 token 消耗」，解释了档位失效如何直接导致截断与成本失控</td>
+            </tr>
+            <tr>
+              <td>证据驱动而非猜测驱动</td>
+              <td>行为 A/B → UI 层预览 → wire 层逐字节对比 → 同 url/key 的 provider 对照实验 → 代码路径核对，四层证据收敛到唯一根因</td>
+            </tr>
+            <tr>
+              <td>上游协作与工程纪律</td>
+              <td>先红后绿的测试顺序、全量回归与基线对照、跨包重构下的 merge 决策、review 意见的当日响应与修复</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 附 ============ -->
+  <section class="sec foot" id="links">
+    <h2 style="font-family: var(--font-body); font-size: var(--fs-sm); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 0 0 1rem;">链接与证据索引</h2>
+    <ul>
+      <li><span class="mono">PR</span> · <a href="https://github.com/Tencent/WeKnora/pull/3552" target="_blank" rel="noopener">github.com/Tencent/WeKnora/pull/3552</a> — merged，commit <span class="mono">a9d71038</span></li>
+      <li><span class="mono">Issue</span> · <a href="https://github.com/Tencent/WeKnora/issues/3551" target="_blank" rel="noopener">github.com/Tencent/WeKnora/issues/3551</a> — auto-closed</li>
+      <li><span class="mono">前序同源修复</span> · <a href="https://github.com/Tencent/WeKnora/pull/3489" target="_blank" rel="noopener">github.com/Tencent/WeKnora/pull/3489</a></li>
+    </ul>
+    <p style="margin-top: 1.4rem; font-size: var(--fs-xs); line-height: 1.7;">
+      文中所有 file:line 引用对应修复前基线 <span class="mono">d6c7665c</span> / 修复后 <span class="mono">a9d71038</span>；
+      wire 请求体为 <span class="mono">WEKNORA_LLM_STREAM_RAW_DUMP=1</span> 实测抓取。
+    </p>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function select(tab) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      var pane = document.getElementById(t.dataset.pane);
+      if (pane) pane.hidden = !on;
+    });
+  }
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () { select(tab); });
+    tab.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      var i = tabs.indexOf(tab);
+      var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      select(next);
+    });
+  });
+})();
+</script>
